@@ -133,7 +133,7 @@ class Node:
 
     def __del__(self):
         for connection in self.connections:
-            del connection
+            self.graph.remove_connection(connection)
         self.graph.remove_node(self)
         del self.node_id
         del self
