@@ -128,7 +128,7 @@ class Node:
         return_text = f'Node(node_id={self.node_id}'
         return_text += f', state={self.state}'
         return_text += f', connections=set([{connections}])'
-        return_text += f', graphs=set([{graph_id}])'
+        return_text += f', graph={graph_id})'
         return return_text
 
     def __del__(self):
@@ -192,7 +192,8 @@ class Connection:
         return_text = f'Connection(connection_id={self.connection_id}'
         return_text += f', node_from={self.node_from.node_id}'
         return_text += f', node_to={self.node_to.node_id}'
-        return_text += f', weight={self.weight})'
+        return_text += f', weight={self.weight}'
+        return_text += f', graph={self.graph})'
         return return_text
 
     def __str__(self):
