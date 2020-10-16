@@ -245,6 +245,10 @@ class Graph:
         return len(self.nodes)
 
     @property
+    def size(self):
+        return len(self.connections)
+
+    @property
     def avarege_degree(self):
         connections_per_node = [node.degree for node in self.nodes]
         print(connections_per_node)
