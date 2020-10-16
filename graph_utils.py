@@ -404,10 +404,8 @@ class Graph:
             max_connections = (number_adjacent*(number_adjacent-1))/2
             number_connections /= 2
 
-        if number_adjacent == 0:
+        if number_adjacent == 0 or max_connections == 0:
             coefficient = 0
-        elif max_connections == 0:
-            coefficient = 1
         else:
             coefficient = number_connections/max_connections
 
