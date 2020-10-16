@@ -226,6 +226,153 @@ class Graph:
             Graph.created_graphs.remove(self.__graph_id)
         del self.__graph_id
 
+    @property
+    def order(self):
+        if self.is_directional:
+            return len(self.connections)
+        return len(self.connections)/2
+
+    @property
+    def avarege_degree(self):
+        connections_per_node = [len(node.connections) for node in self.nodes]
+        print(connections_per_node)
+        sum_degrees = sum(connections_per_node)
+        print(sum_degrees)
+        avarege = sum_degrees/self.order
+        return avarege
+
+    @property
+    def diameter(self):
+        higher_distance = None
+        for node_from in self.nodes:
+            for node_to in self.nodes:
+                distance = self.distance_between(node_from, node_to)
+                if higher_distance:
+                    if distance > higher_distance:
+                        higher_distance = distance
+                else:
+                    higher_distance = distance
+        return higher_distance
+
+    @property
+    def density(self):
+        number_nodes = len(self.nodes)
+        number_connections = len(self.connections)
+        if self.is_directional:
+            return (number_connections)/(number_nodes*(number_nodes-1))
+        return 2*(number_connections)/(number_nodes*(number_nodes-1))
+
+    @property
+    def avarege_distance(self):
+        number_nodes = len(self.nodes)
+        not_ordered_pairs = (number_nodes*(number_nodes-1))/2
+        sum_distance = sum(self.all_distances())/2
+        avarege_distance = sum_distance/not_ordered_pairs
+        return avarege_distance
+
+    def all_distances(self):
+        distances = list()
+        for node_from in self.nodes:
+            for node_to in self.nodes:
+                distance = self.distance_between(node_from, node_to)
+                distances.append(distance)
+
+        return distances
+
+    def extreme_nodes(self):
+        higher_distance = None
+        nodes = None
+        for node_from in self.nodes:
+            for node_to in self.nodes:
+                distance = self.distance_between(node_from, node_to)
+                if higher_distance:
+                    if distance > higher_distance:
+                        higher_distance = distance
+                        nodes = (node_from, node_to)
+                else:
+                    higher_distance = distance
+                    nodes = (node_from, node_to)
+        return nodes
+
+    def even_degree_nodes(self):
+        nodes = set()
+        for node in self.nodes:
+            degree = len(node.connections)
+            if degree % 2 == 0:
+                node.add(nodes)
+        return nodes
+
+    def odd_degree_nodes(self):
+        nodes = set()
+        for node in self.nodes:
+            degree = len(node.connections)
+            if degree % 2 != 0:
+                nodes.add(node)
+        return nodes
+
+    def euler_walk(self):
+        if len(self.odd_degree_nodes()) > 2:
+            return False
+        return True
+
+    def distance_between(self, node_1, node_2):
+        self.clean_nodes('white')
+        node_1.state = 'gray'
+        nodes_not_in_graph = {node_1, node_2}.difference(self.nodes)
+        if len(nodes_not_in_graph) > 0:
+            raise NodeNotInGraphError(nodes=list(nodes_not_in_graph),
+                                      graph=self.graph_id)
+        to_check = [(node_1, 0)]
+        distance = [0]*len(self.nodes)
+        node_index = 0
+        while len(to_check) > 0:
+            node = to_check[0]
+            to_check.pop(0)
+            connections = node[0].connections
+            for connection in connections:
+                if connection.node_to.state == 'white':
+                    connection.node_to.state = 'gray'
+                    node_index += 1
+                    distance[node_index] = distance[node[1]] + 1
+                    if connection.node_to == node_2:
+                        self.clean_nodes()
+                        return distance[node_index]
+                    to_check.append((connection.node_to, node_index))
+            node[0].state = 'black'
+
+        self.clean_nodes()
+        return False
+
+    def breadth_first_search(self, node_from):
+        self.clean_nodes('white')
+        node_from.state = 'gray'
+        nodes_not_in_graph = {node_from}.difference(self.nodes)
+        if len(nodes_not_in_graph) > 0:
+            raise NodeNotInGraphError(nodes=list(nodes_not_in_graph),
+                                      graph=self.graph_id)
+        to_check = [(node_from, 0)]
+        distance = [0]*len(self.nodes)
+        node_index = 0
+        while len(to_check) > 0:
+            node = to_check[0]
+            to_check.pop(0)
+            connections = node[0].connections
+            for connection in connections:
+                if connection.node_to.state == 'white':
+                    print(connection)
+                    connection.node_to.state = 'gray'
+                    node_index += 1
+                    distance[node_index] = distance[node[1]] + 1
+                    to_check.append((connection.node_to, node_index))
+            node[0].state = 'black'
+
+        self.clean_nodes()
+        return True
+
+    def clean_nodes(self, state_value=None):
+        for node in self.nodes:
+            node.state = state_value
+
     def remove_node(self, node):
         self.nodes.remove(node)
 
@@ -235,41 +382,50 @@ class Graph:
     def remove_connection(self, connection):
         self.connections.remove(connection)
 
-    def add_connection(self, node_1, node_2, weight=1, is_directional=None):
+    def add_connection(self, node_from, node_to, weight=1,
+                       is_directional=None):
         is_directional = is_directional if is_directional is not None\
                          else self.is_directional
 
-        connection_1 = Connection(node_from=node_1, node_to=node_2,
+        connection_1 = Connection(node_from=node_from, node_to=node_to,
                                   weight=weight)
-        connection_2 = Connection(node_from=node_2, node_to=node_1,
+        connection_2 = Connection(node_from=node_to, node_to=node_from,
                                   weight=weight)
 
-        nodes_not_in_graph = {node_1, node_2}.difference(self.nodes)
+        nodes_not_in_graph = {node_from, node_to}.difference(self.nodes)
         if len(nodes_not_in_graph) > 0:
             raise NodeNotInGraphError(nodes=list(nodes_not_in_graph),
                                       graph=self.graph_id)
 
-        node_1.connections.add(connection_1)
+        node_from.connections.add(connection_1)
         self.connections.add(connection_1)
         if not is_directional:
-            node_2.connections.add(connection_2)
+            node_to.connections.add(connection_2)
             self.connections.add(connection_2)
 
         return True
 
-    @staticmethod
-    def csv_to_matrix(csv_file, separator=','):
-        return [[True, True]]
-
-    def matrix_to_graph(self, matrix):
+    def matrix_to_graph(self, matrix, ordered=False, beggining_id=0):
         if len(self.nodes) > 0:
             message = 'The Graph you are trying to create already has nodes'
             raise GraphAlreadyHasNodes(message)
-        return True
 
-    def csv_to_graph(self, csv_file, separator=','):
-        matrix = self.csv_to_graph()
-        self.matrix_to_graph(matrix)
+        if ordered:
+            nodes = [Node(node_id=key+beggining_id, state='white') for
+                     key, line in enumerate(matrix)]
+        else:
+            nodes = [Node(state='white') for line in enumerate(matrix)]
+
+        for node in nodes:
+            self.include_node(node)
+        for line_number, line in enumerate(matrix):
+            for column_number, element in enumerate(line):
+                if element == 1:
+                    self.add_connection(node_from=nodes[line_number],
+                                        node_to=nodes[column_number],
+                                        is_directional=True)
+
+        return True
 
     def copy_connections(self, other):
         if not isinstance(other, Graph):
@@ -279,7 +435,7 @@ class Graph:
         old_new_nodes = [(node, Node()) for node in self.nodes]
         for _, new in old_new_nodes:
             other.include_node(new)
-        checks = list()
+
         for old_from, new_from in old_new_nodes:
             new_from.weight = old_from.weight
             new_from.state = old_from.state
@@ -291,7 +447,6 @@ class Graph:
                         other.add_connection(new_from, new_to,
                                              connection.weight,
                                              is_directional=True)
-                        print(checks)
                         break
 
         return other
@@ -340,18 +495,4 @@ class Graph:
 
 
 if __name__ == '__main__':
-    node = [Node(i) for i in range(7)]
-    graph_1 = Graph(nodes={node[1], node[2], node[3]},
-                    is_directional=False,
-                    is_weighted=True)
-    graph_2 = Graph(nodes={node[4], node[5], node[6]},
-                    is_directional=False,
-                    is_weighted=False)
-
-    graph_1.add_connection(node[1], node[2])
-    graph_1.add_connection(node[1], node[3])
-    graph_2.add_connection(node[5], node[6])
-    new_graph = graph_1 + graph_2
-
-    for connection in new_graph.connections:
-        print(connection)
+    pass
