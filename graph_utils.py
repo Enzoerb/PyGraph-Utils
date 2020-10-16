@@ -228,9 +228,7 @@ class Graph:
 
     @property
     def order(self):
-        if self.is_directional:
-            return len(self.connections)
-        return len(self.connections)/2
+        return len(self.nodes)
 
     @property
     def avarege_degree(self):
@@ -492,7 +490,3 @@ class Graph:
     def __del__(self):
         del self.graph_id
         del self
-
-
-if __name__ == '__main__':
-    pass
