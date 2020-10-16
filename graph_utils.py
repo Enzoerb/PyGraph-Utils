@@ -32,6 +32,16 @@ class NodeAlreadyExists(Error):
         super().__init__(self.message)
 
 
+class NodeAlreadyInAGraph(Error):
+
+    def __init__(self, message=None, node=None):
+
+        self.node = node if node else '{node id not informed}'
+        standard_message = f'node {self.node} is already in a graph'
+        self.message = message if message else standard_message
+        super().__init__(self.message)
+
+
 class ConnectionAlreadyExists(Error):
 
     def __init__(self, message=None, connection=None):
@@ -68,7 +78,7 @@ class Node:
     created_nodes = set()
 
     def __init__(self, node_id=None, state: str = None,
-                 connections: '{Connection}' = None, graphs: '{Graph}' = None,
+                 connections: '{Connection}' = None, graph: 'Graph' = None,
                  weight: int = 1):
         if node_id in Node.created_nodes:
             raise NodeAlreadyExists(node=node_id)
@@ -76,7 +86,7 @@ class Node:
         self.state = state
         self.weight = weight
         self.connections = set(connections) if connections else set()
-        self.graphs = set(graphs) if graphs else set()
+        self.graph = graph
         Node.created_nodes.add(self.__node_id)
 
     @property
@@ -97,6 +107,11 @@ class Node:
             Node.created_nodes.remove(self.__node_id)
         del self.__node_id
 
+    @property
+    def degree(self):
+        degree = len(self.connections)
+        return degree
+
     def __eq__(self, other):
         if isinstance(other, Node):
             return self.node_id == other.node_id
@@ -109,20 +124,17 @@ class Node:
         connections_ids = [str(connection.connection_id)
                            for connection in self.connections]
         connections = ', '.join(connections_ids)
-        graphs_ids = [str(graph.graph_id)
-                      for graph in self.graphs]
-        graphs = ', '.join(graphs_ids)
+        graph_id = self.graph.graph_id
         return_text = f'Node(node_id={self.node_id}'
         return_text += f', state={self.state}'
         return_text += f', connections=set([{connections}])'
-        return_text += f', graphs=set([{graphs}])'
+        return_text += f', graphs=set([{graph_id}])'
         return return_text
 
     def __del__(self):
         for connection in self.connections:
             del connection
-        for graph in self.graphs:
-            graph.remove_node(self)
+        self.graph.remove_node(self)
         del self.node_id
         del self
 
@@ -132,13 +144,14 @@ class Connection:
 
     def __init__(self, connection_id=None,
                  node_from: Node = None, node_to: Node = None,
-                 weight: int = 1):
+                 weight: int = 1, graph: 'Graph' = None):
         if id in Connection.created_connections:
             raise ConnectionAlreadyExists(connection=id)
         self.__connection_id = connection_id if connection_id else id(self)
         self.node_from = node_from
         self.node_to = node_to
         self.weight = weight
+        self.graph = graph
         Connection.created_connections.add(self.__connection_id)
 
     @property
@@ -189,6 +202,7 @@ class Connection:
         return return_text
 
     def __del__(self):
+        self.graph.remove_connection(self)
         del self.connection_id
         del self
 
@@ -232,7 +246,7 @@ class Graph:
 
     @property
     def avarege_degree(self):
-        connections_per_node = [len(node.connections) for node in self.nodes]
+        connections_per_node = [node.degree for node in self.nodes]
         print(connections_per_node)
         sum_degrees = sum(connections_per_node)
         print(sum_degrees)
@@ -244,7 +258,8 @@ class Graph:
         higher_distance = None
         for node_from in self.nodes:
             for node_to in self.nodes:
-                distance = self.distance_between(node_from, node_to)
+                distance = self.distance_between_not_weighted(node_from,
+                                                              node_to)
                 if higher_distance:
                     if distance > higher_distance:
                         higher_distance = distance
@@ -272,7 +287,8 @@ class Graph:
         distances = list()
         for node_from in self.nodes:
             for node_to in self.nodes:
-                distance = self.distance_between(node_from, node_to)
+                distance = self.distance_between_not_weighted(node_from,
+                                                              node_to)
                 distances.append(distance)
 
         return distances
@@ -282,7 +298,8 @@ class Graph:
         nodes = None
         for node_from in self.nodes:
             for node_to in self.nodes:
-                distance = self.distance_between(node_from, node_to)
+                distance = self.distance_between_not_weighted(node_from,
+                                                              node_to)
                 if higher_distance:
                     if distance > higher_distance:
                         higher_distance = distance
@@ -295,7 +312,7 @@ class Graph:
     def even_degree_nodes(self):
         nodes = set()
         for node in self.nodes:
-            degree = len(node.connections)
+            degree = node.degree
             if degree % 2 == 0:
                 node.add(nodes)
         return nodes
@@ -303,7 +320,7 @@ class Graph:
     def odd_degree_nodes(self):
         nodes = set()
         for node in self.nodes:
-            degree = len(node.connections)
+            degree = node.degree
             if degree % 2 != 0:
                 nodes.add(node)
         return nodes
@@ -313,7 +330,7 @@ class Graph:
             return False
         return True
 
-    def distance_between(self, node_1, node_2):
+    def distance_between_not_weighted(self, node_1, node_2):
         self.clean_nodes('white')
         node_1.state = 'gray'
         nodes_not_in_graph = {node_1, node_2}.difference(self.nodes)
@@ -373,12 +390,33 @@ class Graph:
 
     def remove_node(self, node):
         self.nodes.remove(node)
+        node.graph = None
+        connections_with_node = {connection for connection in self.connections
+                                 if connection.node_from == node
+                                 or connection.node_to == node}
+        nodes_with_connection = {connection.node_from
+                                 for connection in self.connections
+                                 if connection.node_from == node
+                                 or connection.node_to == node}
+        new_connections = self.connections.difference(connections_with_node)
+        self.connections = new_connections
+        for node in nodes_with_connection:
+            new_node_connections = node.connections\
+                                   .difference(connections_with_node)
+            node.connections = new_node_connections
 
     def include_node(self, node):
+        if node.graph and (node.graph != self):
+            raise NodeAlreadyInAGraph(node=node)
         self.nodes.add(node)
+        node.graph = self
 
     def remove_connection(self, connection):
-        self.connections.remove(connection)
+        if connection in self.connections:
+            self.connections.remove(connection)
+        if connection in connection.node_from.connections:
+            connection.node_from.connections.remove(connection)
+        del connection
 
     def add_connection(self, node_from, node_to, weight=1,
                        is_directional=None):
@@ -386,9 +424,9 @@ class Graph:
                          else self.is_directional
 
         connection_1 = Connection(node_from=node_from, node_to=node_to,
-                                  weight=weight)
+                                  weight=weight, graph=self)
         connection_2 = Connection(node_from=node_to, node_to=node_from,
-                                  weight=weight)
+                                  weight=weight, graph=self)
 
         nodes_not_in_graph = {node_from, node_to}.difference(self.nodes)
         if len(nodes_not_in_graph) > 0:
@@ -437,7 +475,7 @@ class Graph:
         for old_from, new_from in old_new_nodes:
             new_from.weight = old_from.weight
             new_from.state = old_from.state
-            new_from.graphs.add(other)
+            new_from.graph = other
             for connection in old_from.connections:
                 to_connect = connection.node_to
                 for old_to, new_to in old_new_nodes:
