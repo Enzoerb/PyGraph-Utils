@@ -251,9 +251,7 @@ class Graph:
     @property
     def avarege_degree(self):
         connections_per_node = [node.degree for node in self.nodes]
-        print(connections_per_node)
         sum_degrees = sum(connections_per_node)
-        print(sum_degrees)
         avarege = sum_degrees/self.order
         return avarege
 
