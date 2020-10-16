@@ -384,6 +384,32 @@ class Graph:
         self.clean_nodes()
         return True
 
+    def clustering_coefficient(self, node):
+        node_connections = node.connections
+        adjacent_nodes = [connection.node_to
+                          for connection in node_connections]
+        number_adjacent = len(adjacent_nodes)
+        number_connections = 0
+        for node in adjacent_nodes:
+            for connection in node.connections:
+                if connection.node_to in adjacent_nodes:
+                    number_connections += 1
+
+        if self.is_directional:
+            max_connections = 2*(number_adjacent*(number_adjacent-1))/2
+        else:
+            max_connections = (number_adjacent*(number_adjacent-1))/2
+            number_connections /= 2
+
+        if number_adjacent == 0:
+            coefficient = 0
+        elif max_connections == 0:
+            coefficient = 1
+        else:
+            coefficient = number_connections/max_connections
+
+        return coefficient
+
     def clean_nodes(self, state_value=None):
         for node in self.nodes:
             node.state = state_value
