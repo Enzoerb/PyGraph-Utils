@@ -554,6 +554,15 @@ class Graph:
         return_text += f', connections=set([{connections}])'
         return return_text
 
+    def __str__(self):
+        connections = tuple([(connection.node_from.node_id,
+                              connection.node_to.node_id,)
+                             for connection in self.connections])
+        nodes = tuple([node.node_id for node in self.nodes])
+
+        return_text = f"G(V{nodes}, E{connections})"
+        return return_text
+
     def __del__(self):
         del self.graph_id
         del self
