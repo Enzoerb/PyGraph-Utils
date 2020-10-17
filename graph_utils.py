@@ -247,14 +247,16 @@ class Graph:
 
     @property
     def size(self):
-        return len(self.connections)
+        if self.is_directional:
+            return len(self.connections)
+        return len(self.connections)/2
 
     @property
-    def avarege_degree(self):
+    def averege_degree(self):
         connections_per_node = [node.degree for node in self.nodes]
         sum_degrees = sum(connections_per_node)
-        avarege = sum_degrees/self.order
-        return avarege
+        averege = sum_degrees/self.order
+        return averege
 
     @property
     def diameter(self):
@@ -279,12 +281,12 @@ class Graph:
         return 2*(number_connections)/(number_nodes*(number_nodes-1))
 
     @property
-    def avarege_distance(self):
+    def averege_distance(self):
         number_nodes = len(self.nodes)
         not_ordered_pairs = (number_nodes*(number_nodes-1))/2
         sum_distance = sum(self.all_distances())/2
-        avarege_distance = sum_distance/not_ordered_pairs
-        return avarege_distance
+        averege_distance = sum_distance/not_ordered_pairs
+        return averege_distance
 
     def all_distances(self):
         distances = list()
