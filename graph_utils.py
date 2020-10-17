@@ -112,6 +112,10 @@ class Node:
         degree = len(self.connections)
         return degree
 
+    def connected_to(self):
+        nodes = [connection.node_to for connection in self.connections]
+        return nodes
+
     def __eq__(self, other):
         if isinstance(other, Node):
             return self.node_id == other.node_id
