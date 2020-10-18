@@ -278,8 +278,8 @@ class Graph:
 
     @property
     def density(self):
-        number_nodes = len(self.nodes)
-        number_connections = len(self.connections)
+        number_nodes = self.order
+        number_connections = self.size
         if self.is_directional:
             return (number_connections)/(number_nodes*(number_nodes-1))
         return 2*(number_connections)/(number_nodes*(number_nodes-1))
