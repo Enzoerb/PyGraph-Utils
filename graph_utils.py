@@ -380,7 +380,9 @@ class Graph:
         while len(to_check) > 0:
             node = to_check[0]
             to_check.pop(0)
-            connections = node[0].connections
+            unordered_connections = node[0].connections
+            connections = sorted(unordered_connections,
+                                 key=lambda x: (x.node_to.node_id))
             for connection in connections:
                 if connection.node_to.state == 'white':
                     print(connection)
